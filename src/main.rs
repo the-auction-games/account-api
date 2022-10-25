@@ -10,25 +10,25 @@ fn get_accounts() -> String {
 
 // Get account by id
 #[get("/<account_id>")]
-fn get_account(account_id: u64) -> String {
+async fn get_account(account_id: u64) -> String {
     format!("Account #{}", account_id)
 }
 
 // Create new account
 #[post("/", data = "<account>")]
-fn create_account(account: String) -> String {
+async fn create_account(account: String) -> String {
     format!("Created account {}", account)
 }
 
 // Update account by id
 #[put("/<account_id>", data = "<account>")]
-fn update_account(account_id: u64, account: String) -> String {
+async fn update_account(account_id: u64, account: String) -> String {
     format!("Updated account {}: {}", account_id, account)
 }
 
 // Delete account by id
 #[delete("/<account_id>")]
-fn delete_account(account_id: u64) -> String {
+async fn delete_account(account_id: u64) -> String {
     format!("Deleted account {}", account_id)
 }
 
