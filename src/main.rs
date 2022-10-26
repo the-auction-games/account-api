@@ -1,6 +1,17 @@
-mod account;
+#[macro_use]
+extern crate rocket;
 
-#[macro_use] extern crate rocket;
+// TODO: Use this
+use rocket::serde::{json::Json, Serialize, Deserialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct Account {
+    id: String,
+    name: String,
+    email: String,
+    password: String,
+}
 
 // Get all accounts
 #[get("/")]
@@ -10,8 +21,13 @@ fn get_accounts() -> String {
 
 // Get account by id
 #[get("/<account_id>")]
-async fn get_account(account_id: u64) -> String {
-    format!("Account #{}", account_id)
+async fn get_account(account_id: u64) -> Json<Account> {
+    let url: String = format!("http://localhost:3500/v1.0/state/postgres/{}", account_id);
+    let account: Account = reqwest::get(&url).await.unwrap().json().await.unwrap();
+
+    // let j = Json(account);
+    // format!("Account: {}", j.email)
+    Json(account)
 }
 
 // Create new account
@@ -35,6 +51,14 @@ async fn delete_account(account_id: u64) -> String {
 // Start the server
 #[launch]
 fn rocket() -> _ {
-    rocket::build()
-        .mount("/account", routes![get_account, get_accounts, create_account, delete_account, update_account])
+    rocket::build().mount(
+        "/account",
+        routes![
+            get_account,
+            get_accounts,
+            create_account,
+            delete_account,
+            update_account
+        ],
+    )
 }
