@@ -1,10 +1,19 @@
 mod account;
+mod data_layer;
+use data_layer::{AccountEntity, get_account_dao};
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 // Get all accounts
 #[get("/")]
 fn get_accounts() -> String {
+
+    // loop 10 times
+    for i in 0..10 {
+        get_account_dao().get_account(i.to_string(), i.to_string());
+    }
+
     format!("All accounts")
 }
 
@@ -21,9 +30,9 @@ fn create_account(account: String) -> String {
 }
 
 // Update account by id
-#[put("/<account_id>", data = "<account>")]
-fn update_account(account_id: u64, account: String) -> String {
-    format!("Updated account {}: {}", account_id, account)
+#[put("/", data = "<account>")]
+fn update_account(account: String) -> String {
+    format!("Updated account {}", account)
 }
 
 // Delete account by id
@@ -32,9 +41,23 @@ fn delete_account(account_id: u64) -> String {
     format!("Deleted account {}", account_id)
 }
 
+#[post("/validate", data = "<credentials>")]
+fn validate_account(credentials: String) -> String {
+    format!("Validated account {}", credentials)
+}
+
 // Start the server
 #[launch]
 fn rocket() -> _ {
-    rocket::build()
-        .mount("/account", routes![get_account, get_accounts, create_account, delete_account, update_account])
+    rocket::build().mount(
+        "/account",
+        routes![
+            get_account,
+            get_accounts,
+            create_account,
+            delete_account,
+            update_account,
+            validate_account
+        ],
+    )
 }
