@@ -1,6 +1,8 @@
 use super::account_entity::AccountEntity;
 
 pub trait AccountDao {
+
+    fn get_accounts(&self) -> Vec<AccountEntity>;
     
     fn get_account(&self, email: String, password: String) -> Option<AccountEntity>;
 

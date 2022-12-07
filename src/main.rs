@@ -1,6 +1,7 @@
-mod account;
+// TODO: UPDATE UMLS TO MATCH THIS
 mod data_layer;
-use data_layer::{AccountEntity, get_account_dao};
+mod services;
+use services::{AccountService, get_account_service, CredentialsModel, AccountModel};
 
 #[macro_use]
 extern crate rocket;
@@ -9,12 +10,13 @@ extern crate rocket;
 #[get("/")]
 fn get_accounts() -> String {
 
-    // loop 10 times
-    for i in 0..10 {
-        get_account_dao().get_account(i.to_string(), i.to_string());
-    }
+    let service: Box<dyn AccountService> = services::get_account_service();
 
-    format!("All accounts")
+    // TODO: TEST THIS
+
+    service.get_accounts().iter().map(|account| {
+        format!("Account #{}: {}", account.id, account.name)
+    }).collect::<Vec<String>>().join("")
 }
 
 // Get account by id

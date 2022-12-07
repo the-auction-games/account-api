@@ -1,3 +1,5 @@
+use crate::services::AccountModel;
+
 ///
 /// The Account Entity.
 ///
@@ -9,4 +11,15 @@ pub struct AccountEntity {
     pub name: String,
     pub email: String,
     pub password: String,
+}
+
+impl AccountEntity {
+    pub fn from_model(account: AccountModel) -> Self {
+        AccountEntity {
+            id: account.id,
+            name: account.name,
+            email: account.credentials.email,
+            password: account.credentials.password,
+        }
+    }
 }

@@ -970,7 +970,6 @@ name = "rust-api"
 version = "0.1.0"
 dependencies = [
  "rocket",
- "uuid",
 ]
 
 [[package]]
@@ -1348,15 +1347,6 @@ checksum = "9f214e8f697e925001e66ec2c6e37a4ef93f0f78c2eed7814394e10c62025b05"
 dependencies = [
  "generic-array",
  "subtle",
-]
-
-[[package]]
-name = "uuid"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "feb41e78f93363bb2df8b0e86a2ca30eed7806ea16ea0c790d757cf93f79be83"
-dependencies = [
- "getrandom",
 ]
 
 [[package]]
