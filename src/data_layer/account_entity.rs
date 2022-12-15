@@ -1,3 +1,4 @@
+use rocket::serde::{Deserialize, Serialize};
 use crate::services::AccountModel;
 
 ///
@@ -6,6 +7,8 @@ use crate::services::AccountModel;
 /// This entity is used to directly store account data
 /// in the database.
 ///
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
 pub struct AccountEntity {
     pub id: String,
     pub name: String,
@@ -14,12 +17,12 @@ pub struct AccountEntity {
 }
 
 impl AccountEntity {
-    pub fn from_model(account: AccountModel) -> Self {
+    pub fn from_model(account: &AccountModel) -> Self {
         AccountEntity {
-            id: account.id,
-            name: account.name,
-            email: account.credentials.email,
-            password: account.credentials.password,
+            id: account.id.clone(),
+            name: account.name.clone(),
+            email: account.email.clone(),
+            password: account.password.clone(),
         }
     }
 }

@@ -1,15 +1,19 @@
-use super::CredentialsModel;
+use rocket::async_trait;
+use super::AccountDetails;
 use super::AccountModel;
+use super::CredentialsModel;
 
+#[async_trait]
 pub trait AccountService {
+    async fn get_accounts(&self) -> Vec<AccountDetails>;
 
-    fn get_accounts(&self) -> Vec<AccountModel>;
+    async fn get_account(&self, id: String) -> Option<AccountDetails>;
 
-    fn validate(&self, credentials: CredentialsModel) -> Option<AccountModel>;
+    async fn validate_account(&self, credentials: CredentialsModel) -> Option<AccountDetails>;
 
-    fn create_account(&self, account: AccountModel) -> bool;
+    async fn create_account(&self, account: AccountModel) -> bool;
 
-    fn update_account(&self, account: AccountModel) -> bool;
+    async fn update_account(&self, account: AccountModel) -> bool;
 
-    fn delete_account(&self, id: String) -> bool;
+    async fn delete_account(&self, id: String) -> bool;
 }
