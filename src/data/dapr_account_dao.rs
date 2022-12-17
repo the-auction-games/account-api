@@ -24,7 +24,7 @@ struct DaprResults {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(crate = "rocket::serde")]
 struct Entry {
-    account_entity: AccountEntity,
+    data: AccountEntity,
 }
 
 /// The dapr account dao.
@@ -98,7 +98,7 @@ impl AccountDao for DaprAccountDao {
             .unwrap()
             .results
             .iter()
-            .for_each(|entry: &Entry| entities.push(entry.account_entity.clone()));
+            .for_each(|entry: &Entry| entities.push(entry.data.clone()));
 
         // Return entities
         entities
@@ -174,7 +174,7 @@ impl AccountDao for DaprAccountDao {
 
         // Return account entity if exists
         match first_entry {
-            Some(entry) => Some(entry.account_entity),
+            Some(entry) => Some(entry.data),
             None => None,
         }
     }
@@ -230,7 +230,7 @@ impl AccountDao for DaprAccountDao {
 
         // Return account entity if exists
         match first_entry {
-            Some(entry) => Some(entry.account_entity),
+            Some(entry) => Some(entry.data),
             None => None,
         }
     }
