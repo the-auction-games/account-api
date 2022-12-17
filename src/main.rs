@@ -12,6 +12,10 @@ use rocket::{
 };
 use services::{AccountModel, AccountService, CredentialsModel, DaprAccountService};
 
+// Set testing file
+#[cfg(test)]
+mod tests;
+
 #[macro_use]
 extern crate rocket;
 
@@ -149,7 +153,11 @@ struct ServiceProvider {
 /// # Returns
 /// * `rocket::Rocket` - The rocket server
 #[launch]
-async fn rocket() -> _ {
+fn rocket() -> _ {
+
+    // Notify console of starting server
+    println!("Starting server...");
+
     // The dapr account service for account operations
     let service: ServiceProvider = ServiceProvider {
         service: services::DaprAccountService::new(DaprAccountDao::new()),
