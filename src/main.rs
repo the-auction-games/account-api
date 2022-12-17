@@ -1,112 +1,167 @@
-mod data_layer;
+mod data;
 mod services;
-use data_layer::DaprAccountDao;
-use rocket::serde::json::{
-    serde_json::{json, Value},
-    Json,
+use data::DaprAccountDao;
+use rocket::{
+    http::Status,
+    response::status::Custom,
+    serde::json::{
+        serde_json::{json, Value},
+        Json,
+    },
+    State,
 };
-use services::{AccountModel, AccountService, CredentialsModel};
+use services::{AccountModel, AccountService, CredentialsModel, DaprAccountService};
 
 #[macro_use]
 extern crate rocket;
 
-/**
- * TODO:
- * - CHECK IF WE CAN PASS A SERVICE INSTANCE TO THE ROUTES
- * - FINISH DAO METHOD IMPLEMENTATIONS
- * - RETURN STATUS CODES IN ROUTES
- * - COMMENTS
- */
-
-// Get all accounts
+/// API endpoint to get all accounts.
+///
+/// # Arguments
+/// * `provider` - The service provider for account operations
+///
+/// # Returns
+/// * `Custom<Value>` - The list of accounts
 #[get("/")]
-async fn get_accounts() -> Value {
-    let service = services::DaprAccountService::new(DaprAccountDao::new());
-    json!(service.get_accounts().await)
+async fn get_accounts(provider: &State<ServiceProvider>) -> Custom<Value> {
+    Custom(Status::Ok, json!(provider.service.get_accounts().await))
 }
 
-// Get account by id
-#[get("/<id>")]
-async fn get_account(id: String) -> Value {
-    let service = services::DaprAccountService::new(DaprAccountDao::new());
-
-    let details = service.get_account(id).await;
-
-    match details {
-        Some(account) => json!(account),
-        None => json!({ "error": "Account not found" }),
+/// API endpoint to get an account by id.
+///
+/// # Arguments
+/// * `provider` - The service provider for account operations
+/// * `id` - The id of the account to get
+///
+/// # Returns
+/// * `Custom<Value>` - The account
+#[get("/id/<id>")]
+async fn get_account_by_id(provider: &State<ServiceProvider>, id: String) -> Custom<Value> {
+    match provider.service.get_account_by_id(id).await {
+        Some(account) => Custom(Status::Ok, json!(account)),
+        None => Custom(Status::NotFound, json!({})),
     }
 }
 
-// Create new account
+/// API endpoint to get an account by email.
+///
+/// # Arguments
+/// * `provider` - The service provider for account operations
+/// * `email` - The email of the account to get
+///
+/// # Returns
+/// * `Custom<Value>` - The account
+#[get("/email/<email>")]
+async fn get_account_by_email(provider: &State<ServiceProvider>, email: String) -> Custom<Value> {
+    match provider.service.get_account_by_email(email).await {
+        Some(account) => Custom(Status::Ok, json!(account)),
+        None => Custom(Status::NotFound, json!({})),
+    }
+}
+
+/// API endpoint to create an account.
+///
+/// # Arguments
+/// * `provider` - The service provider for account operations
+/// * `account` - The account to create
+///
+/// # Returns
+/// * `Custom<Value>` - The created account
 #[post("/", format = "application/json", data = "<account>")]
-async fn create_account(account: Json<AccountModel>) -> Value {
-    let service = services::DaprAccountService::new(DaprAccountDao::new());
-
-    let account = account.into_inner();
-
-    println!("Account: {:?}", &account);
-
-    if service.create_account(account).await {
-        json!({"success": "Account created"})
+async fn create_account(
+    provider: &State<ServiceProvider>,
+    account: Json<AccountModel>,
+) -> Custom<Value> {
+    if provider.service.create_account(account.into_inner()).await {
+        Custom(Status::Created, json!({}))
     } else {
-        json!({ "error": "Account not created" })
+        Custom(
+            Status::Conflict,
+            json!({ "error": "Account already exists" }),
+        )
     }
 }
 
-// Update account by id
+/// API endpoint to update an account.
+///
+/// # Arguments
+/// * `provider` - The service provider for account operations
+/// * `account` - The account to update
+///
+/// # Returns
+/// * `Status` - The status of the operation
 #[put("/", format = "application/json", data = "<account>")]
-async fn update_account(account: Json<AccountModel>) -> Value {
-    let service = services::DaprAccountService::new(DaprAccountDao::new());
-
-    let account = account.into_inner();
-
-    println!("Account: {:?}", &account);
-
-    if service.update_account(account).await {
-        json!({"success": "Account created"})
+async fn update_account(provider: &State<ServiceProvider>, account: Json<AccountModel>) -> Status {
+    if provider.service.update_account(account.into_inner()).await {
+        Status::NoContent
     } else {
-        json!({ "error": "Account not found" })
+        Status::NotFound
     }
 }
 
-// Delete account by id
-#[delete("/<account_id>")]
-async fn delete_account(account_id: u64) -> Value {
-    let service = services::DaprAccountService::new(DaprAccountDao::new());
-
-    if service.delete_account(account_id.to_string()).await {
-        json!({"success": "Account deleted"})
+/// API endpoint to delete an account by id.
+///
+/// # Arguments
+/// * `provider` - The service provider for account operations
+/// * `account_id` - The id of the account to delete
+#[delete("/id/<account_id>")]
+async fn delete_account(provider: &State<ServiceProvider>, account_id: String) -> Status {
+    if provider
+        .service
+        .delete_account(account_id.to_string())
+        .await
+    {
+        Status::NoContent
     } else {
-        json!({ "error": "Account not found" })
+        Status::NotFound
     }
 }
 
-// Validate account by email and password
+/// API endpoint to get validate an account by email and password.
+///
+/// # Arguments
+/// * `provider` - The service provider for account operations
+/// * `credentials` - The credentials to validate
 #[post("/validate", format = "application/json", data = "<credentials>")]
-async fn validate_account(credentials: Json<CredentialsModel>) -> Value {
-    let service = services::DaprAccountService::new(DaprAccountDao::new());
-
-    let credentials = credentials.into_inner();
-
-    println!("Credentials: {:?}", &credentials);
-
-    let account = service.validate_account(credentials).await;
-
-    match account {
-        Some(account) => json!(account),
-        None => json!({ "error": "Account not found" }),
+async fn validate_account(
+    provider: &State<ServiceProvider>,
+    credentials: Json<CredentialsModel>,
+) -> Custom<Value> {
+    match provider
+        .service
+        .validate_account(credentials.into_inner())
+        .await
+    {
+        Some(account) => Custom(Status::Ok, json!(account)),
+        None => Custom(Status::NotFound, json!({})),
     }
 }
 
-// Start the server
+/// The service provider for account operations.
+struct ServiceProvider {
+    service: DaprAccountService,
+}
+
+/// Start the rocket server.
+///
+/// This method replaces the main method in a normal rust application.
+///
+/// # Returns
+/// * `rocket::Rocket` - The rocket server
 #[launch]
 async fn rocket() -> _ {
-    rocket::build().mount(
+    // The dapr account service for account operations
+    let service: ServiceProvider = ServiceProvider {
+        service: services::DaprAccountService::new(DaprAccountDao::new()),
+    };
+
+    // Start the server
+    rocket::build().manage(service).mount(
         "/accounts",
         routes![
-            get_account,
             get_accounts,
+            get_account_by_id,
+            get_account_by_email,
             create_account,
             delete_account,
             update_account,
