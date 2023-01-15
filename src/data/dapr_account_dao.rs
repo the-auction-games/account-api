@@ -81,7 +81,9 @@ impl AccountDao for DaprAccountDao {
 
         // Get all data from dapr and map to entities
         client
+            // Post to the url
             .post(url)
+            // Add body to the post request
             .body(
                 json!(
                     {
@@ -90,12 +92,17 @@ impl AccountDao for DaprAccountDao {
                 )
                 .to_string(),
             )
+            // Send the request
             .send()
             .await
             .unwrap()
+            // Get the json response and map to DaprResults
             .json::<DaprResults>()
             .await
-            .unwrap()
+            .unwrap_or(DaprResults {
+                results: vec![],
+            })
+            // Loop through all results and add to entities
             .results
             .iter()
             .for_each(|entry: &Entry| entities.push(entry.data.clone()));
@@ -123,12 +130,16 @@ impl AccountDao for DaprAccountDao {
 
         // Get account from dapr
         client
+            // Get request on the url
             .get(url)
+            // Send the request
             .send()
             .await
             .unwrap()
+            // Get the json response and map to AccountEntity
             .json::<AccountEntity>()
             .await
+            // Return the entity
             .ok()
     }
 
@@ -151,7 +162,9 @@ impl AccountDao for DaprAccountDao {
 
         // Get first entry from dapr
         let first_entry = client
+            // Post to the query url
             .post(query_url)
+            // Add body to the post request
             .body(
                 json!(
                     {
@@ -162,14 +175,18 @@ impl AccountDao for DaprAccountDao {
                 )
                 .to_string(),
             )
+            // Send the request
             .send()
             .await
             .unwrap()
+            // Get the json response and map to DaprResults
             .json::<DaprResults>()
             .await
             .unwrap_or(DaprResults { results: vec![] })
+            // Get the first entry
             .results
             .first()
+            // Clone the entry
             .cloned();
 
         // Return account entity if exists
@@ -200,7 +217,9 @@ impl AccountDao for DaprAccountDao {
         // Collect the first entry in the state storage
         // with a matching email and password
         let first_entry = client
+            // Post to the url
             .post(url)
+            // Add body to the post request
             .body(
                 json!(
                     {
@@ -218,14 +237,18 @@ impl AccountDao for DaprAccountDao {
                 )
                 .to_string(),
             )
+            // Send the request
             .send()
             .await
             .unwrap()
+            // Get the json response and map to DaprResults
             .json::<DaprResults>()
             .await
             .unwrap_or(DaprResults { results: vec![] })
+            // Get the first entry
             .results
             .first()
+            // Clone the entry
             .cloned();
 
         // Return account entity if exists
@@ -260,27 +283,25 @@ impl AccountDao for DaprAccountDao {
 
         // Post if account creation is successful
         client
+            // Post to the url
             .post(url)
+            // Add body to the post request
             .body(
                 json!(
                     [
                         {
                             "key": account.id,
                             "value": account,
-                            // {
-                            //     "id": account.id,
-                            //     "name": account.name,
-                            //     "email": account.email,
-                            //     "password": account.password,
-                            // },
                         },
                     ]
                 )
                 .to_string(),
             )
+            // Send the request
             .send()
             .await
             .unwrap()
+            // Check if the request was successful
             .status()
             .is_success()
     }
@@ -306,7 +327,9 @@ impl AccountDao for DaprAccountDao {
 
         // Post if account is found
         client
+            // Post to the url
             .post(url)
+            // Add body to the post request
             .body(
                 json!(
                     [
@@ -318,9 +341,11 @@ impl AccountDao for DaprAccountDao {
                 )
                 .to_string(),
             )
+            // Send the request
             .send()
             .await
             .unwrap()
+            // Check if the request was successful
             .status()
             .is_success()
     }
@@ -349,10 +374,13 @@ impl AccountDao for DaprAccountDao {
 
         // Delete account if exists
         client
+            // Delete to the url
             .delete(url)
+            // Send the request
             .send()
             .await
             .unwrap()
+            // Check if the request was successful
             .status()
             .is_success()
     }
