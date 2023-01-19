@@ -165,7 +165,7 @@ fn rocket() -> _ {
 
     // Start the server
     rocket::build().manage(service).mount(
-        "/accounts",
+        "/api/v1/accounts",
         routes![
             get_accounts,
             get_account_by_id,

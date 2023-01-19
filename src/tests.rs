@@ -11,7 +11,7 @@ fn test_get_all() {
     let client = Client::tracked(rocket()).expect("valid rocket instance");
 
     // Make request
-    let response = client.get("/accounts").dispatch();
+    let response = client.get("/api/v1/accounts").dispatch();
 
     // Assert response is ok
     assert_eq!(response.status(), Status::Ok);
@@ -31,7 +31,7 @@ fn test_create_and_delete() {
 
     // Get the size of the accounts before creation
     let before_size = client
-        .get("/accounts")
+        .get("/api/v1/accounts")
         .dispatch()
         .into_json::<Vec<AccountDetails>>()
         .unwrap()
@@ -47,7 +47,7 @@ fn test_create_and_delete() {
 
     // Post the new account
     let response = client
-        .post("/accounts")
+        .post("/api/v1/accounts")
         .header(ContentType::JSON)
         .body(json!(&account).to_string())
         .dispatch();
@@ -57,7 +57,7 @@ fn test_create_and_delete() {
 
     // Assert the size has increased
     let after_size = client
-        .get("/accounts")
+        .get("/api/v1/accounts")
         .dispatch()
         .into_json::<Vec<AccountDetails>>()
         .unwrap()
@@ -65,14 +65,14 @@ fn test_create_and_delete() {
     assert_eq!(after_size, before_size + 1);
 
     // Delete account
-    let response = client.delete("/accounts/id/test_1").dispatch();
+    let response = client.delete("/api/v1/accounts/id/test_1").dispatch();
 
     // Assert response is no content
     assert_eq!(response.status(), Status::NoContent);
 
     // Assert the size has decreased
     let after_size = client
-        .get("/accounts")
+        .get("/api/v1/accounts")
         .dispatch()
         .into_json::<Vec<AccountDetails>>()
         .unwrap()
@@ -99,7 +99,7 @@ fn test_get_by_id() {
 
     // Post the new account
     let response = client
-        .post("/accounts")
+        .post("/api/v1/accounts")
         .header(ContentType::JSON)
         .body(json!(&account).to_string())
         .dispatch();
@@ -108,7 +108,7 @@ fn test_get_by_id() {
     assert_eq!(response.status(), Status::Created);
 
     // Get account by id
-    let response = client.get("/accounts/id/test_1").dispatch();
+    let response = client.get("/api/v1/accounts/id/test_1").dispatch();
 
     // Assert response is ok
     assert_eq!(response.status(), Status::Ok);
@@ -117,7 +117,7 @@ fn test_get_by_id() {
     response.into_json::<AccountDetails>().unwrap();
 
     // Delete account
-    let response = client.delete("/accounts/id/test_1").dispatch();
+    let response = client.delete("/api/v1/accounts/id/test_1").dispatch();
 
     // Assert response is no content
     assert_eq!(response.status(), Status::NoContent);
@@ -142,7 +142,7 @@ fn test_get_by_email() {
 
     // Post the new account
     let response = client
-        .post("/accounts")
+        .post("/api/v1/accounts")
         .header(ContentType::JSON)
         .body(json!(&account).to_string())
         .dispatch();
@@ -151,7 +151,7 @@ fn test_get_by_email() {
     assert_eq!(response.status(), Status::Created);
 
     // Get account by email
-    let response = client.get("/accounts/email/test1@gmail.com").dispatch();
+    let response = client.get("/api/v1/accounts/email/test1@gmail.com").dispatch();
 
     // Assert response is ok
     assert_eq!(response.status(), Status::Ok);
@@ -160,7 +160,7 @@ fn test_get_by_email() {
     response.into_json::<AccountDetails>().unwrap();
 
     // Delete account
-    let response = client.delete("/accounts/id/test_1").dispatch();
+    let response = client.delete("/api/v1/accounts/id/test_1").dispatch();
 
     // Assert response is no content
     assert_eq!(response.status(), Status::NoContent);
@@ -185,7 +185,7 @@ fn test_update() {
 
     // Post the new account
     let response = client
-        .post("/accounts")
+        .post("/api/v1/accounts")
         .header(ContentType::JSON)
         .body(json!(&account).to_string())
         .dispatch();
@@ -198,7 +198,7 @@ fn test_update() {
 
     // Put the updated account
     let response = client
-        .put("/accounts")
+        .put("/api/v1/accounts")
         .header(ContentType::JSON)
         .body(json!(&account).to_string())
         .dispatch();
@@ -207,7 +207,7 @@ fn test_update() {
     assert_eq!(response.status(), Status::NoContent);
 
     // Get account by id
-    let response = client.get("/accounts/id/test_1").dispatch();
+    let response = client.get("/api/v1/accounts/id/test_1").dispatch();
 
     // Assert response is ok
     assert_eq!(response.status(), Status::Ok);
@@ -219,7 +219,7 @@ fn test_update() {
     assert_eq!(account_details.email, "updated@gmail.com".to_string());
 
     // Delete account
-    let response = client.delete("/accounts/id/test_1").dispatch();
+    let response = client.delete("/api/v1/accounts/id/test_1").dispatch();
 
     // Assert response is no content
     assert_eq!(response.status(), Status::NoContent);
@@ -244,7 +244,7 @@ fn test_validate_account() {
 
     // Post the new account
     let response = client
-        .post("/accounts")
+        .post("/api/v1/accounts")
         .header(ContentType::JSON)
         .body(json!(&account).to_string())
         .dispatch();
@@ -260,7 +260,7 @@ fn test_validate_account() {
 
     // Validate by email and password
     let response = client
-        .post("/accounts/validate")
+        .post("/api/v1/accounts/validate")
         .header(ContentType::JSON)
         .body(json!(&credentials).to_string())
         .dispatch();
@@ -272,7 +272,7 @@ fn test_validate_account() {
     response.into_json::<AccountDetails>().unwrap();
 
     // Delete account
-    let response = client.delete("/accounts/id/test_1").dispatch();
+    let response = client.delete("/api/v1/accounts/id/test_1").dispatch();
 
     // Assert response is no content
     assert_eq!(response.status(), Status::NoContent);
