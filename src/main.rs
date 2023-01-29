@@ -1,14 +1,16 @@
 mod data;
 mod services;
+
 use data::DaprAccountDao;
 use rocket::{
-    http::Status,
+    fairing::{Fairing, Info, Kind},
+    http::{Header, Status},
     response::status::Custom,
     serde::json::{
         serde_json::{json, Value},
         Json,
     },
-    State,
+    Request, Response, State,
 };
 use services::{AccountModel, AccountService, CredentialsModel, DaprAccountService};
 
@@ -141,9 +143,46 @@ async fn validate_account(
     }
 }
 
+/// API endpoint to handle the OPTIONS request.
+/// 
+/// This is a requirement for CORS. This method lets
+/// the client know CORS is acceptable.
+#[options("/<_..>")]
+fn options() {
+    /* Left blank. This will trigger the Cors fairing response. */
+}
+
 /// The service provider for account operations.
 struct ServiceProvider {
     service: DaprAccountService,
+}
+
+/// The CORS fairing for the server.
+pub struct Cors;
+
+/// The CORS fairing for the server.
+///
+/// # Methods
+/// * `info` - The info for the fairing
+/// * `on_response` - The response for the fairing
+#[rocket::async_trait]
+impl Fairing for Cors {
+    fn info(&self) -> Info {
+        Info {
+            name: "Cross-Origin-Resource-Sharing Fairing",
+            kind: Kind::Response,
+        }
+    }
+
+    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        response.set_header(Header::new(
+            "Access-Control-Allow-Methods",
+            "POST, PATCH, PUT, DELETE, HEAD, OPTIONS, GET",
+        ));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
 }
 
 /// Start the rocket server.
@@ -154,7 +193,6 @@ struct ServiceProvider {
 /// * `rocket::Rocket` - The rocket server
 #[launch]
 fn rocket() -> _ {
-
     // Notify console of starting server
     println!("Starting server...");
 
@@ -164,16 +202,20 @@ fn rocket() -> _ {
     };
 
     // Start the server
-    rocket::build().manage(service).mount(
-        "/api/v1/accounts",
-        routes![
-            get_accounts,
-            get_account_by_id,
-            get_account_by_email,
-            create_account,
-            delete_account,
-            update_account,
-            validate_account
-        ],
-    )
+    rocket::build()
+        .attach(Cors)
+        .manage(service)
+        .mount(
+            "/api/v1/accounts",
+            routes![
+                options,
+                get_accounts,
+                get_account_by_id,
+                get_account_by_email,
+                create_account,
+                delete_account,
+                update_account,
+                validate_account
+            ],
+        )
 }
