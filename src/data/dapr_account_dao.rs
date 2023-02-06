@@ -6,6 +6,10 @@ use rocket::{
     serde::json::serde_json::json,
     serde::{Deserialize, Serialize},
 };
+use pwhash::bcrypt;
+
+/// The dapr state storage name
+const STATE_STORE_NAME: &str = "postgres";
 
 /// The dapr results model maps the results from the dapr state store.
 ///
@@ -54,10 +58,75 @@ impl DaprAccountDao {
     pub fn new() -> Self {
         DaprAccountDao {}
     }
-}
 
-/// The dapr state storage name
-const STATE_STORE_NAME: &str = "postgres";
+    /// Hash a password using bcrypt.
+    /// 
+    /// # Arguments
+    /// * `password` - The password to hash
+    /// 
+    /// # Returns
+    /// The hashed password
+    pub fn hash_password(&self, password: String) -> String {
+        bcrypt::hash(password).unwrap()
+    }
+
+    /// Validate a password using bcrypt.
+    /// 
+    /// # Arguments
+    /// * `password` - The password to validate
+    /// * `hash` - The password hash
+    /// 
+    /// # Returns
+    /// True if the password is valid
+    pub fn validate_password(&self, password: String, hash: &str) -> bool {
+        bcrypt::verify(password, hash)
+    }
+    
+    /// Save an account to the dapr state store.
+    /// 
+    /// # Arguments
+    /// * `account` - The account to save
+    /// 
+    /// # Returns
+    /// True if the account was saved successfully
+    pub async fn save_account(&self, account: AccountEntity) -> bool {
+        // Dapr sidecar url
+        let url = format!("http://localhost:3500/v1.0/state/{}", STATE_STORE_NAME);
+
+        // Reqwest client
+        let client = ClientBuilder::new().build().unwrap();
+
+        // Hash the password in the account
+        let hashed_account = AccountEntity {
+            password: self.hash_password(account.password),
+            ..account
+        };
+
+        // Post if account creation is successful
+        client
+            // Post to the url
+            .post(url)
+            // Add body to the post request
+            .body(
+                json!(
+                    [
+                        {
+                            "key": hashed_account.id,
+                            "value": hashed_account,
+                        },
+                    ]
+                )
+                .to_string(),
+            )
+            // Send the request
+            .send()
+            .await
+            .unwrap()
+            // Check if the request was successful
+            .status()
+            .is_success()
+    }
+}
 
 /// The dapr account dao implementation.
 #[async_trait]
@@ -205,55 +274,20 @@ impl AccountDao for DaprAccountDao {
     /// # Returns
     /// An optional account entity
     async fn validate_account(&self, email: String, password: String) -> Option<AccountEntity> {
-        // Dapr sidecar url
-        let url = format!(
-            "http://localhost:3500/v1.0-alpha1/state/{}/query",
-            STATE_STORE_NAME
-        );
-
-        // Reqwest client
-        let client = ClientBuilder::new().build().unwrap();
-
-        // Collect the first entry in the state storage
-        // with a matching email and password
-        let first_entry = client
-            // Post to the url
-            .post(url)
-            // Add body to the post request
-            .body(
-                json!(
-                    {
-                        "filter": {
-                            "AND": [
-                                {
-                                    "EQ": { "email": email }
-                                },
-                                {
-                                    "EQ": { "password": password }
-                                }
-                            ]
-                        }
-                    }
-                )
-                .to_string(),
-            )
-            // Send the request
-            .send()
-            .await
-            .unwrap()
-            // Get the json response and map to DaprResults
-            .json::<DaprResults>()
-            .await
-            .unwrap_or(DaprResults { results: vec![] })
-            // Get the first entry
-            .results
-            .first()
-            // Clone the entry
-            .cloned();
-
-        // Return account entity if exists
-        match first_entry {
-            Some(entry) => Some(entry.data),
+        // Get an account by email
+        match self.get_account_by_email(email).await {
+            // Check if account exists
+            Some(account) => {
+                // Check if password matches
+                if self.validate_password(password, account.password.clone().as_str()) {
+                    // Return valid account
+                    Some(account)
+                } else {
+                    // Invalid credentials, return none
+                    None
+                }
+            },
+            // Account with email does not exist
             None => None,
         }
     }
@@ -275,35 +309,7 @@ impl AccountDao for DaprAccountDao {
             return false;
         }
 
-        // Dapr sidecar url
-        let url = format!("http://localhost:3500/v1.0/state/{}", STATE_STORE_NAME);
-
-        // Reqwest client
-        let client = ClientBuilder::new().build().unwrap();
-
-        // Post if account creation is successful
-        client
-            // Post to the url
-            .post(url)
-            // Add body to the post request
-            .body(
-                json!(
-                    [
-                        {
-                            "key": account.id,
-                            "value": account,
-                        },
-                    ]
-                )
-                .to_string(),
-            )
-            // Send the request
-            .send()
-            .await
-            .unwrap()
-            // Check if the request was successful
-            .status()
-            .is_success()
+        self.save_account(account).await
     }
 
     /// Updates an account in the dapr state store.
@@ -314,40 +320,12 @@ impl AccountDao for DaprAccountDao {
     /// # Returns
     /// A boolean indicating if the account was updated
     async fn update_account(&self, account: AccountEntity) -> bool {
-        // Dapr sidecar url
-        let url = format!("http://localhost:3500/v1.0/state/{}", STATE_STORE_NAME);
-
-        // Request client
-        let client = ClientBuilder::new().build().unwrap();
-
-        // return false if account not found
+        // Return false if account not found
         if self.get_account_by_id(account.id.clone()).await.is_none() {
             return false;
         }
 
-        // Post if account is found
-        client
-            // Post to the url
-            .post(url)
-            // Add body to the post request
-            .body(
-                json!(
-                    [
-                        {
-                            "key": account.id,
-                            "value": account,
-                        },
-                    ]
-                )
-                .to_string(),
-            )
-            // Send the request
-            .send()
-            .await
-            .unwrap()
-            // Check if the request was successful
-            .status()
-            .is_success()
+        self.save_account(account).await
     }
 
     /// Deletes an account in the dapr state store.
