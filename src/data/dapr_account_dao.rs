@@ -1,15 +1,16 @@
 use super::account_dao::AccountDao;
 use super::account_entity::AccountEntity;
+use pwhash::bcrypt;
 use reqwest::ClientBuilder;
 use rocket::{
     async_trait,
     serde::json::serde_json::json,
     serde::{Deserialize, Serialize},
 };
-use pwhash::bcrypt;
 
-/// The dapr state storage name
+/// The dapr state storage name & port
 const STATE_STORE_NAME: &str = "postgres";
+const STATE_STORE_PORT: &str = "3500";
 
 /// The dapr results model maps the results from the dapr state store.
 ///
@@ -60,10 +61,10 @@ impl DaprAccountDao {
     }
 
     /// Hash a password using bcrypt.
-    /// 
+    ///
     /// # Arguments
     /// * `password` - The password to hash
-    /// 
+    ///
     /// # Returns
     /// The hashed password
     pub fn hash_password(&self, password: String) -> String {
@@ -71,27 +72,30 @@ impl DaprAccountDao {
     }
 
     /// Validate a password using bcrypt.
-    /// 
+    ///
     /// # Arguments
     /// * `password` - The password to validate
     /// * `hash` - The password hash
-    /// 
+    ///
     /// # Returns
     /// True if the password is valid
     pub fn validate_password(&self, password: String, hash: &str) -> bool {
         bcrypt::verify(password, hash)
     }
-    
+
     /// Save an account to the dapr state store.
-    /// 
+    ///
     /// # Arguments
     /// * `account` - The account to save
-    /// 
+    ///
     /// # Returns
     /// True if the account was saved successfully
     pub async fn save_account(&self, account: AccountEntity) -> bool {
         // Dapr sidecar url
-        let url = format!("http://localhost:3500/v1.0/state/{}", STATE_STORE_NAME);
+        let url = format!(
+            "http://localhost:{}/v1.0/state/{}",
+            STATE_STORE_PORT, STATE_STORE_NAME
+        );
 
         // Reqwest client
         let client = ClientBuilder::new().build().unwrap();
@@ -138,8 +142,8 @@ impl AccountDao for DaprAccountDao {
     async fn get_accounts(&self) -> Vec<AccountEntity> {
         // Dapr query url
         let url = format!(
-            "http://localhost:3500/v1.0-alpha1/state/{}/query",
-            STATE_STORE_NAME
+            "http://localhost:{}/v1.0-alpha1/state/{}/query",
+            STATE_STORE_PORT, STATE_STORE_NAME
         );
 
         // Reqwest client
@@ -168,9 +172,7 @@ impl AccountDao for DaprAccountDao {
             // Get the json response and map to DaprResults
             .json::<DaprResults>()
             .await
-            .unwrap_or(DaprResults {
-                results: vec![],
-            })
+            .unwrap_or(DaprResults { results: vec![] })
             // Loop through all results and add to entities
             .results
             .iter()
@@ -190,8 +192,8 @@ impl AccountDao for DaprAccountDao {
     async fn get_account_by_id(&self, id: String) -> Option<AccountEntity> {
         // Dapr sidecar url
         let url = format!(
-            "http://localhost:3500/v1.0/state/{}/{}",
-            STATE_STORE_NAME, id
+            "http://localhost:{}/v1.0/state/{}/{}",
+            STATE_STORE_PORT, STATE_STORE_NAME, id
         );
 
         // Reqwest client
@@ -222,8 +224,8 @@ impl AccountDao for DaprAccountDao {
     async fn get_account_by_email(&self, email: String) -> Option<AccountEntity> {
         // Dapr query url
         let query_url = format!(
-            "http://localhost:3500/v1.0-alpha1/state/{}/query",
-            STATE_STORE_NAME
+            "http://localhost:{}/v1.0-alpha1/state/{}/query",
+            STATE_STORE_PORT, STATE_STORE_NAME
         );
 
         // Reqwest client
@@ -286,7 +288,7 @@ impl AccountDao for DaprAccountDao {
                     // Invalid credentials, return none
                     None
                 }
-            },
+            }
             // Account with email does not exist
             None => None,
         }
@@ -338,8 +340,8 @@ impl AccountDao for DaprAccountDao {
     async fn delete_account(&self, id: String) -> bool {
         // The dapr sidecar url
         let url = format!(
-            "http://localhost:3500/v1.0/state/{}/{}",
-            STATE_STORE_NAME, id
+            "http://localhost:{}/v1.0/state/{}/{}",
+            STATE_STORE_PORT, STATE_STORE_NAME, id
         );
 
         // Reqwest client
