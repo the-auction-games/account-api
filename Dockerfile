@@ -1,6 +1,7 @@
 FROM rust
 WORKDIR /app
-COPY target/debug/rust-api /app
+RUN cargo build --release
+COPY target/release/rust-api /app
 COPY Rocket.toml /app
 ENV PORT=8000
 EXPOSE $PORT
