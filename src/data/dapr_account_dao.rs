@@ -1,3 +1,5 @@
+use std::env;
+
 use super::account_dao::AccountDao;
 use super::account_entity::AccountEntity;
 use pwhash::bcrypt;
@@ -8,9 +10,51 @@ use rocket::{
     serde::{Deserialize, Serialize},
 };
 
-/// The dapr state storage name & port
-const STATE_STORE_NAME: &str = "postgres";
-const STATE_STORE_PORT: &str = "3500";
+/// Get the the sidecar port.
+/// 
+/// # Returns
+/// The sidecar port
+fn get_sidecar_port() -> String {
+    match env::var("STATE_STORE_PORT") {
+        Ok(val) => val,
+        Err(_e) => "3500".to_string(),
+    }
+}
+
+/// Get the state store name.
+/// 
+/// # Returns
+/// The state store name
+fn get_state_store_name() -> String {
+    match env::var("STATE_STORE_NAME") {
+        Ok(val) => val,
+        Err(_e) => "account-db".to_string(),
+    }
+}
+
+/// Get the dapr url.
+/// 
+/// # Returns
+/// The dapr url
+fn get_sidecar_url() -> String {
+    format!(
+        "http://localhost:{}/v1.0/state/{}",
+        get_sidecar_port(),
+        get_state_store_name()
+    )
+}
+
+/// Get the dapr query url.
+/// 
+/// # Returns
+/// The dapr query url
+fn get_sidecar_query_url() -> String {
+    format!(
+        "http://localhost:{}/v1.0-alpha1/state/{}/query",
+        get_sidecar_port(),
+        get_state_store_name()
+    )
+}
 
 /// The dapr results model maps the results from the dapr state store.
 ///
@@ -91,12 +135,6 @@ impl DaprAccountDao {
     /// # Returns
     /// True if the account was saved successfully
     pub async fn save_account(&self, account: AccountEntity) -> bool {
-        // Dapr sidecar url
-        let url = format!(
-            "http://localhost:{}/v1.0/state/{}",
-            STATE_STORE_PORT, STATE_STORE_NAME
-        );
-
         // Reqwest client
         let client = ClientBuilder::new().build().unwrap();
 
@@ -109,7 +147,7 @@ impl DaprAccountDao {
         // Post if account creation is successful
         client
             // Post to the url
-            .post(url)
+            .post(get_sidecar_url())
             // Add body to the post request
             .body(
                 json!(
@@ -140,12 +178,6 @@ impl AccountDao for DaprAccountDao {
     /// # Returns
     /// A vector of account entities
     async fn get_accounts(&self) -> Vec<AccountEntity> {
-        // Dapr query url
-        let url = format!(
-            "http://localhost:{}/v1.0-alpha1/state/{}/query",
-            STATE_STORE_PORT, STATE_STORE_NAME
-        );
-
         // Reqwest client
         let client = ClientBuilder::new().build().unwrap();
 
@@ -155,7 +187,7 @@ impl AccountDao for DaprAccountDao {
         // Get all data from dapr and map to entities
         client
             // Post to the url
-            .post(url)
+            .post(get_sidecar_query_url())
             // Add body to the post request
             .body(
                 json!(
@@ -190,11 +222,8 @@ impl AccountDao for DaprAccountDao {
     /// # Returns
     /// An optional account entity
     async fn get_account_by_id(&self, id: String) -> Option<AccountEntity> {
-        // Dapr sidecar url
-        let url = format!(
-            "http://localhost:{}/v1.0/state/{}/{}",
-            STATE_STORE_PORT, STATE_STORE_NAME, id
-        );
+        // Create the url
+        let url = format!("{}/{}", get_sidecar_url(), id);
 
         // Reqwest client
         let client = ClientBuilder::new().build().unwrap();
@@ -222,19 +251,13 @@ impl AccountDao for DaprAccountDao {
     /// # Returns
     /// An optional account entity
     async fn get_account_by_email(&self, email: String) -> Option<AccountEntity> {
-        // Dapr query url
-        let query_url = format!(
-            "http://localhost:{}/v1.0-alpha1/state/{}/query",
-            STATE_STORE_PORT, STATE_STORE_NAME
-        );
-
         // Reqwest client
         let client = ClientBuilder::new().build().unwrap();
 
         // Get first entry from dapr
         let first_entry = client
             // Post to the query url
-            .post(query_url)
+            .post(get_sidecar_query_url())
             // Add body to the post request
             .body(
                 json!(
@@ -338,11 +361,8 @@ impl AccountDao for DaprAccountDao {
     /// # Returns
     /// A boolean indicating if the account was deleted
     async fn delete_account(&self, id: String) -> bool {
-        // The dapr sidecar url
-        let url = format!(
-            "http://localhost:{}/v1.0/state/{}/{}",
-            STATE_STORE_PORT, STATE_STORE_NAME, id
-        );
+        // Create the url
+        let url = format!("{}/{}", get_sidecar_url(), id);
 
         // Reqwest client
         let client = ClientBuilder::new().build().unwrap();
