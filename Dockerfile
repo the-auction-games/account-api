@@ -12,7 +12,7 @@ COPY --from=builder ./build/target/release/account-api .
 # Environment variables
 ENV APP_PORT=8000
 ENV SIDECAR_PORT=3500
-ENV STATE_STORE_NAME="account-db"
+ENV STATE_STORE_NAME="account-statestore"
 
 # Rocket environment variables
 ENV ROCKET_ADDRESS=0.0.0.0
